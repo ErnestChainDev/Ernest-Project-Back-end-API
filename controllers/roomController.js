@@ -1,124 +1,63 @@
-const Room = require('../models/Room');
+const Room = require("../models/Room");
 
-// @desc    Get all rooms
-// @route   GET /api/rooms
-exports.getRooms = async (req, res, next) => {
-  try {
-    const page = parseInt(req.query.page) || 1;
-    const limit = parseInt(req.query.limit) || 10;
-    const skip = (page - 1) * limit;
-
-    // Build filter
-    const filter = {};
-    if (req.query.status) filter.status = req.query.status;
-    if (req.query.type) filter.type = req.query.type;
-    if (req.query.minPrice) filter.price = { $gte: parseFloat(req.query.minPrice) };
-    if (req.query.maxPrice) filter.price = { ...filter.price, $lte: parseFloat(req.query.maxPrice) };
-
-    const rooms = await Room.find(filter)
-      .limit(limit)
-      .skip(skip)
-      .sort({ number: 1 });
-
-    const total = await Room.countDocuments(filter);
-
-    res.status(200).json({
-      success: true,
-      count: rooms.length,
-      total,
-      page,
-      pages: Math.ceil(total / limit),
-      data: rooms
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Get single room
-// @route   GET /api/rooms/:id
-exports.getRoom = async (req, res, next) => {
-  try {
-    const room = await Room.findById(req.params.id);
-
-    if (!room) {
-      return res.status(404).json({
-        success: false,
-        message: 'Room not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      data: room
-    });
-  } catch (error) {
-    next(error);
-  }
-};
-
-// @desc    Create new room
-// @route   POST /api/rooms
-exports.createRoom = async (req, res, next) => {
+// CREATE ROOM
+exports.createRoom = async (req, res) => {
   try {
     const room = await Room.create(req.body);
-
-    res.status(201).json({
-      success: true,
-      message: 'Room created successfully',
-      data: room
-    });
-  } catch (error) {
-    next(error);
+    return res.status(201).json(room);
+  } catch (err) {
+    console.error("Error creating room:", err);
+    return res.status(400).json({ error: err.message });
   }
 };
 
-// @desc    Update room
-// @route   PUT /api/rooms/:id
-exports.updateRoom = async (req, res, next) => {
+// GET ALL ROOMS
+exports.getRooms = async (req, res) => {
   try {
-    const room = await Room.findByIdAndUpdate(
-      req.params.id,
-      req.body,
-      { new: true, runValidators: true }
-    );
-
-    if (!room) {
-      return res.status(404).json({
-        success: false,
-        message: 'Room not found'
-      });
-    }
-
-    res.status(200).json({
-      success: true,
-      message: 'Room updated successfully',
-      data: room
-    });
-  } catch (error) {
-    next(error);
+    const rooms = await Room.find();
+    return res.status(200).json(rooms);
+  } catch (err) {
+    return res.status(500).json({ error: "Failed to fetch rooms" });
   }
 };
 
-// @desc    Delete room
-// @route   DELETE /api/rooms/:id
-exports.deleteRoom = async (req, res, next) => {
+// GET ROOM BY ID
+exports.getRoom = async (req, res) => {
+  try {
+    const room = await Room.findById(req.params.id);
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    return res.json(room);
+  } catch (err) {
+    return res.status(400).json({ error: "Invalid room ID" });
+  }
+};
+
+// UPDATE ROOM
+exports.updateRoom = async (req, res) => {
+  try {
+    const room = await Room.findByIdAndUpdate(req.params.id, req.body, {
+      new: true,
+      runValidators: true,
+    });
+
+    if (!room) return res.status(404).json({ error: "Room not found" });
+
+    return res.json(room);
+  } catch (err) {
+    return res.status(400).json({ error: err.message });
+  }
+};
+
+// DELETE ROOM
+exports.deleteRoom = async (req, res) => {
   try {
     const room = await Room.findByIdAndDelete(req.params.id);
 
-    if (!room) {
-      return res.status(404).json({
-        success: false,
-        message: 'Room not found'
-      });
-    }
+    if (!room) return res.status(404).json({ error: "Room not found" });
 
-    res.status(200).json({
-      success: true,
-      message: 'Room deleted successfully',
-      data: {}
-    });
-  } catch (error) {
-    next(error);
+    return res.json({ message: "Room deleted successfully" });
+  } catch (err) {
+    return res.status(400).json({ error: "Invalid room ID" });
   }
 };
